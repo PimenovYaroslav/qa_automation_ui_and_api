@@ -44,27 +44,32 @@ def config():
 
 
 @pytest.fixture(scope="function")
-def driver(config):
+def driver(config, tmp_path):
     """
     Initializes and configures the Selenium WebDriver for Chrome.
-    This fixture has a 'function' scope, creating a new driver for each test function.
-    It handles setup (launching browser) and teardown (quitting browser).
+    It uses a new, unique temporary directory for each test function to prevent
+    'SessionNotCreatedException' errors.
     """
     base_url = config['UI_SAUCEDEMO']['BASE_URL']
     chrome_options = Options()
 
-    # Add various options to configure the Chrome browser for a stable test environment
-    chrome_options.add_argument("--no-sandbox")  # Bypass OS security model, required for Docker
-    chrome_options.add_argument("--disable-dev-shm-usage")  # Overcome limited resource problems
-    chrome_options.add_argument("--disable-gpu")  # Applicable to Windows OS only
-    chrome_options.add_argument("--window-size=1920,1080")  # Set a consistent window size
+    # Create a unique temporary directory for the user data to prevent conflicts
+    user_data_dir = os.path.join(tmp_path, "chrome-test-profile")
+    chrome_options.add_argument(f"--user-data-dir={user_data_dir}")
+
+    # Add other configuration options
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--window-size=1920,1080")
     chrome_options.add_argument("--disable-popup-blocking")
     chrome_options.add_argument("--disable-extensions")
     chrome_options.add_argument("--disable-save-password-bubble")
     chrome_options.add_argument("--disable-password-manager-reauthentication")
-    chrome_options.add_argument("--user-data-dir=/tmp/chrome-test-profile")  # Use a temporary profile
+    chrome_options.add_argument("--incognito")
+    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+    chrome_options.add_argument("--headless")
 
-    # Set experimental options to disable password manager and notifications
     prefs = {
         "credentials_enable_service": False,
         "profile.password_manager_enabled": False,
@@ -74,28 +79,24 @@ def driver(config):
     }
     chrome_options.add_experimental_option("prefs", prefs)
 
-    # Automatically download and manage the ChromeDriver
+    # Initialize driver to None to prevent 'referenced before assignment' error
+    driver = None
     try:
         service = ChromeService(ChromeDriverManager().install())
-    except Exception as e:
-        pytest.fail(f"Failed to install ChromeDriver: {e}")
+        driver = webdriver.Chrome(service=service, options=chrome_options)
+        driver.get(base_url)
 
-    # Initialize the Chrome WebDriver
-    driver = webdriver.Chrome(service=service, options=chrome_options)
-    driver.get(base_url)
+        # Clear all cookies and storage to ensure a clean state
+        driver.delete_all_cookies()
+        driver.execute_script("window.localStorage.clear();")
+        driver.execute_script("window.sessionStorage.clear();")
 
-    # --- Pre-test state cleanup ---
-    # Clear all cookies, local storage, and session storage to ensure a clean state for each test
-    driver.delete_all_cookies()
-    driver.execute_script("window.localStorage.clear();")
-    driver.execute_script("window.sessionStorage.clear();")
-    # ---------------------------------------------
+        yield driver
 
-    yield driver  # Provide the driver instance to the test function
-
-    # --- Teardown ---
-    # Quit the driver after the test function has completed
-    driver.quit()
+    finally:
+        # Check if the driver was successfully initialized before quitting
+        if driver is not None:
+            driver.quit()
 
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
