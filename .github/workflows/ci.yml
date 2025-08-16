@@ -1,33 +1,70 @@
+# The name of the workflow as it will appear in the GitHub Actions tab.
 name: Python CI/CD
 
+# The 'on' keyword specifies when this workflow will be triggered.
+# In this case, it runs automatically on every push to the 'main' branch.
 on:
   push:
     branches: [ "main" ]
 
+# A workflow is made up of one or more jobs.
+# Here, we define a single job named 'test'.
 jobs:
   test:
+    # 'runs-on' defines the type of virtual machine the job will run on.
+    # 'ubuntu-latest' is a standard, up-to-date choice for Python projects.
     runs-on: ubuntu-latest
+
+    # The 'env' block defines environment variables for the job.
+    # We securely pass secrets and variables from GitHub's settings
+    # so they can be accessed by the test scripts.
+    env:
+      API_SPECIAL_KEY: ${{ secrets.API_SPECIAL_KEY }}
+      SAUCE_ERROR_USER: ${{ secrets.SAUCE_ERROR_USER }}
+      SAUCE_INVALID_PASSWORD: ${{ secrets.SAUCE_INVALID_PASSWORD }}
+      SAUCE_LOCKED_USER: ${{ secrets.SAUCE_LOCKED_USER }}
+      SAUCE_PASSWORD: ${{ secrets.SAUCE_PASSWORD }}
+      SAUCE_PERFORMANCE_GLITCH_USER: ${{ secrets.SAUCE_PERFORMANCE_GLITCH_USER }}
+      SAUCE_PROBLEM_USER: ${{ secrets.SAUCE_PROBLEM_USER }}
+      SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
+      SAUCE_VISUAL_USER: ${{ secrets.SAUCE_VISUAL_USER }}
+      API_BASE_URL: ${{ vars.API_BASE_URL }}
+      SAUCE_BASE_URL: ${{ vars.SAUCE_BASE_URL }}
+      # You can add other secrets or variables here as needed.
+
+    # 'steps' is a sequence of tasks that will be executed as part of the job.
     steps:
       - name: Checkout repository
+        # This action checks out your repository's code onto the runner.
+        # It's a required first step for any workflow that needs access to the code.
         uses: actions/checkout@v4
 
       - name: Set up Python
+        # This action sets up the specified version of Python on the runner.
+        # It ensures a consistent and controlled environment for running your tests.
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
       - name: Install uv and dependencies
+        # We install 'uv' and then use 'uv sync' to create a virtual environment
+        # and install all project dependencies defined in requirements.txt.
         run: |
           pip install uv
           uv sync
-          # The .venv folder is created here.
 
       - name: Run tests with pytest
+        # This step activates the virtual environment and runs the test suite.
+        # The '--alluredir' flag instructs pytest to save test results in a specific
+        # directory, which is necessary for generating the Allure report later.
         run: |
           source .venv/bin/activate
           pytest --alluredir=allure-results
 
       - name: Upload Allure report as artifact
+        # This final step archives the 'allure-results' directory as a workflow artifact.
+        # This allows you to download the raw report data from the GitHub Actions UI,
+        # which you can then use to generate a complete HTML report locally.
         uses: actions/upload-artifact@v4
         with:
           name: allure-report
