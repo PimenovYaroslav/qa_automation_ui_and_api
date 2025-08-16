@@ -3,7 +3,7 @@ name = "qa-automation-project"
 version = "0.1.0"
 description = "QA Automation project for UI and API testing."
 authors = [
-    { name = "Slava", email = "slavk0@ukr.net" }
+    { name = "Slava", email = "yaroslavpimenov92@gmail.com" }
 ]
 requires-python = ">=3.12"
 dependencies = [
@@ -15,7 +15,8 @@ dependencies = [
     "faker==37.5.3",
     "allure-pytest==2.15.0",
     "tenacity==9.1.2",
-    "httpx==0.28.1"
+    "httpx==0.28.1",
+    "python-dotenv==1.1.1"
 ]
 
 

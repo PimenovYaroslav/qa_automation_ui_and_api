@@ -3,14 +3,9 @@ import httpx
 
 
 class PetAPI:
-
-    def __init__(self, base_url="https://petstore.swagger.io/v2"):
-        api_key = os.getenv("API_KEY")
-        self.base_url = base_url
+    def __init__(self, base_url=None):
+        self.base_url = base_url or "https://petstore.swagger.io/v2"
         self.pet_endpoint = f"{self.base_url}/pet"
-        self.headers = {}
-        if api_key:
-            self.headers["api_key"] = api_key
 
     def create_pet(self, pet_data):
         headers = {
@@ -44,8 +39,13 @@ class PetAPI:
         return response
 
     def delete_pet(self, pet_id):
+        api_key = os.getenv("API_SPECIAL_KEY")
+        if not api_key:
+            raise ValueError("API key not found in environment variables!")
+
         url = f"{self.pet_endpoint}/{pet_id}"
         headers = {
+            "api_key": api_key
         }
         response = httpx.delete(url, headers=headers)
         return response

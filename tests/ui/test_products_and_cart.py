@@ -1,7 +1,7 @@
 from pages.products_page import ProductsPage
 
 
-class TestProductsAndCart():
+class TestProductsAndCart:
     def test_add_backpack_to_cart_and_verify_badge(self, logged_in_standard_user):
         products_page = logged_in_standard_user
         products_page.add_sauce_labs_backpack_to_cart()

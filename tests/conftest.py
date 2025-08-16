@@ -2,7 +2,8 @@ import pytest
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
-import configparser
+import os
+from dotenv import load_dotenv
 import random
 from endpoints.pet_api import PetAPI
 from endpoints.user_api import UserAPI
@@ -13,33 +14,69 @@ from pages.products_page import ProductsPage
 from selenium.webdriver.chrome.options import Options
 import allure
 
+load_dotenv()
+
 
 @pytest.fixture(scope="session")
 def config():
-    config = configparser.ConfigParser()
-    config.read('config.ini')
-    return config
+    return {
+        "API": {
+            "BASE_URL": os.getenv("API_BASE_URL"),
+            "SPECIAL_KEY": os.getenv("API_SPECIAL_KEY")
+        },
+        "UI_SAUCEDEMO": {
+            "BASE_URL": os.getenv("SAUCE_BASE_URL"),
+            "USERNAME": os.getenv("SAUCE_USERNAME"),
+            "PASSWORD": os.getenv("SAUCE_PASSWORD"),
+            "LOCKED_USER": os.getenv("SAUCE_LOCKED_USER"),
+            "PROBLEM_USER": os.getenv("SAUCE_PROBLEM_USER"),
+            "PERFORMANCE_GLITCH_USER": os.getenv("SAUCE_PERFORMANCE_GLITCH_USER"),
+            "ERROR_USER": os.getenv("SAUCE_ERROR_USER"),
+            "VISUAL_USER": os.getenv("SAUCE_VISUAL_USER"),
+            "INVALID_PASSWORD": os.getenv("SAUCE_INVALID_PASSWORD"),
+        }
+    }
 
 
 @pytest.fixture(scope="function")
 def driver(config):
     base_url = config['UI_SAUCEDEMO']['BASE_URL']
     chrome_options = Options()
-    chrome_options.add_argument("--headless")
+
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--window-size=1920,1080")
     chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--window-size=1920,1080")
+    chrome_options.add_argument("--disable-popup-blocking")
+    chrome_options.add_argument("--disable-extensions")
+    chrome_options.add_argument("--disable-save-password-bubble")
+    chrome_options.add_argument("--disable-password-manager-reauthentication")
+    chrome_options.add_argument("--user-data-dir=/tmp/chrome-test-profile")
+
+    prefs = {
+        "credentials_enable_service": False,
+        "profile.password_manager_enabled": False,
+        "profile.default_content_setting_values.notifications": 2,
+        "profile.default_content_setting_values.automatic_downloads": 1,
+        "profile.default_content_setting_values.popups": 0,
+    }
+    chrome_options.add_experimental_option("prefs", prefs)
 
     try:
         service = ChromeService(ChromeDriverManager().install())
     except Exception as e:
         pytest.fail(f"Failed to install ChromeDriver: {e}")
+
     driver = webdriver.Chrome(service=service, options=chrome_options)
     driver.get(base_url)
 
-    yield driver
+    # --- Очищення стану браузера перед тестом ---
+    driver.delete_all_cookies()
+    driver.execute_script("window.localStorage.clear();")
+    driver.execute_script("window.sessionStorage.clear();")
+    # ---------------------------------------------
 
+    yield driver
     driver.quit()
 
 

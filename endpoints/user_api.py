@@ -1,16 +1,10 @@
-import os
 import httpx
 
 
 class UserAPI:
-
-    def __init__(self, base_url="https://petstore.swagger.io/v2"):
-        api_key = os.getenv("API_KEY")
-        self.base_url = base_url
+    def __init__(self, base_url=None):
+        self.base_url = base_url or "https://petstore.swagger.io/v2"
         self.user_endpoint = f"{self.base_url}/user"
-        self.headers = {}
-        if api_key:
-            self.headers["api_key"] = api_key
 
     def create_user(self, user_data):
         headers = {
